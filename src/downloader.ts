@@ -9,8 +9,7 @@ import fs from 'fs'
 export async function download(
   version: SemVer,
   method: Method,
-  useLocalCache: boolean,
-  useGitHubCache: boolean
+  useLocalCache: boolean
 ): Promise<string> {
   // First try to find tool with desired version in tool cache (local to machine)
   const toolName = 'cuda_installer'

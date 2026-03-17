@@ -33021,7 +33021,7 @@ class WindowsLinks extends AbstractLinks {
 }
 
 // Download helper which returns the installer executable and caches it for next runs
-async function download(version, method, useLocalCache, useGitHubCache) {
+async function download(version, method, useLocalCache) {
     // First try to find tool with desired version in tool cache (local to machine)
     const toolName = 'cuda_installer';
     const toolId = `${toolName}-windows`;
@@ -33192,8 +33192,6 @@ async function run() {
         coreExports.debug(`Desired subPackages: ${subPackages}`);
         const methodString = coreExports.getInput('method');
         coreExports.debug(`Desired method: ${methodString}`);
-        const useGitHubCache = coreExports.getBooleanInput('use-github-cache');
-        coreExports.debug(`Desired GitHub cache usage: ${useGitHubCache}`);
         const useLocalCache = coreExports.getBooleanInput('use-local-cache');
         coreExports.debug(`Desired local cache usage: ${useLocalCache}`);
         // Parse subPackages array
@@ -33204,7 +33202,7 @@ async function run() {
         // Parse version string
         const version = await getVersion(cuda, methodParsed);
         // Download
-        const executablePath = await download(version, methodParsed, useLocalCache, useGitHubCache);
+        const executablePath = await download(version, methodParsed, useLocalCache);
         // Install
         await install(executablePath, version, subPackagesArray);
         // Add CUDA environment variables to GitHub environment variables

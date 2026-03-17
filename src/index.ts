@@ -15,8 +15,6 @@ async function run(): Promise<void> {
     core.debug(`Desired subPackages: ${subPackages}`)
     const methodString: string = core.getInput('method')
     core.debug(`Desired method: ${methodString}`)
-    const useGitHubCache: boolean = core.getBooleanInput('use-github-cache')
-    core.debug(`Desired GitHub cache usage: ${useGitHubCache}`)
     const useLocalCache: boolean = core.getBooleanInput('use-local-cache')
     core.debug(`Desired local cache usage: ${useLocalCache}`)
 
@@ -37,8 +35,7 @@ async function run(): Promise<void> {
     const executablePath: string = await download(
       version,
       methodParsed,
-      useLocalCache,
-      useGitHubCache
+      useLocalCache
     )
 
     // Install
