@@ -33025,14 +33025,15 @@ async function download(version, method, useLocalCache) {
     // First try to find tool with desired version in tool cache (local to machine)
     const toolName = 'cuda_installer';
     const toolId = `${toolName}-windows`;
+    const destFileName = `${toolId}_${version}.exe`;
     // Path that contains the executable file
     let executablePath;
     if (useLocalCache) {
         const toolPath = toolCacheExports.find(toolId, `${version}`);
         if (toolPath) {
-            // Tool is already in cache
+            // Tool is already in cache — tc.find returns a directory, resolve the exe inside it
             coreExports.debug(`Found in local machine cache ${toolPath}`);
-            executablePath = toolPath;
+            executablePath = await findExeInDir(toolPath);
         }
         else {
             coreExports.debug(`Not found in local cache`);
@@ -33044,7 +33045,6 @@ async function download(version, method, useLocalCache) {
         // Get download URL
         const url = await getDownloadURL(method, version);
         const downloadDirectory = `cuda_download`;
-        const destFileName = `${toolId}_${version}.exe`;
         const destFilePath = `${downloadDirectory}/${destFileName}`;
         // Check if file already exists
         if (!(await fileExists(destFilePath))) {
@@ -33065,6 +33065,20 @@ async function download(version, method, useLocalCache) {
     coreExports.debug(`Executable path ${executablePath}`);
     // Return full executable path
     return executablePath;
+}
+// Find a single .exe file inside a directory (used for tool-cache directories)
+async function findExeInDir(dir) {
+    const entries = await require$$1$1.promises.readdir(dir);
+    const exeFiles = entries.filter((f) => f.endsWith('.exe'));
+    if (exeFiles.length === 1) {
+        return require$$1__default.join(dir, exeFiles[0]);
+    }
+    else if (exeFiles.length === 0) {
+        throw new Error(`No .exe file found in cache directory: ${dir}`);
+    }
+    else {
+        throw new Error(`Multiple .exe files found in cache directory: ${dir} (${exeFiles.join(', ')})`);
+    }
 }
 async function fileExists(filePath) {
     try {

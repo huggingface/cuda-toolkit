@@ -4,6 +4,7 @@ import { SemVer } from 'semver'
 import { WindowsLinks } from './links/windows-links.js'
 import { Method } from './method.js'
 import fs from 'fs'
+import path from 'path'
 
 // Download helper which returns the installer executable and caches it for next runs
 export async function download(
@@ -14,14 +15,15 @@ export async function download(
   // First try to find tool with desired version in tool cache (local to machine)
   const toolName = 'cuda_installer'
   const toolId = `${toolName}-windows`
+  const destFileName = `${toolId}_${version}.exe`
   // Path that contains the executable file
   let executablePath: string | undefined
   if (useLocalCache) {
     const toolPath = tc.find(toolId, `${version}`)
     if (toolPath) {
-      // Tool is already in cache
+      // Tool is already in cache — tc.find returns a directory, resolve the exe inside it
       core.debug(`Found in local machine cache ${toolPath}`)
-      executablePath = toolPath
+      executablePath = await findExeInDir(toolPath)
     } else {
       core.debug(`Not found in local cache`)
     }
@@ -32,7 +34,6 @@ export async function download(
     // Get download URL
     const url: URL = await getDownloadURL(method, version)
     const downloadDirectory = `cuda_download`
-    const destFileName = `${toolId}_${version}.exe`
     const destFilePath = `${downloadDirectory}/${destFileName}`
     // Check if file already exists
     if (!(await fileExists(destFilePath))) {
@@ -59,6 +60,21 @@ export async function download(
   core.debug(`Executable path ${executablePath}`)
   // Return full executable path
   return executablePath
+}
+
+// Find a single .exe file inside a directory (used for tool-cache directories)
+async function findExeInDir(dir: string): Promise<string> {
+  const entries = await fs.promises.readdir(dir)
+  const exeFiles = entries.filter((f) => f.endsWith('.exe'))
+  if (exeFiles.length === 1) {
+    return path.join(dir, exeFiles[0])
+  } else if (exeFiles.length === 0) {
+    throw new Error(`No .exe file found in cache directory: ${dir}`)
+  } else {
+    throw new Error(
+      `Multiple .exe files found in cache directory: ${dir} (${exeFiles.join(', ')})`
+    )
+  }
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
