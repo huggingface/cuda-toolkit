@@ -1,27 +1,20 @@
-import { LinuxLinks } from '../../src/links/linux-links'
 import { WindowsLinks } from '../../src/links/windows-links'
 import { getLinks } from '../../src/links/get-links'
 
-test.concurrent('getLinks gives a valid ILinks class', async () => {
-  try {
-    const links = await getLinks()
-    expect(
-      links instanceof LinuxLinks || links instanceof WindowsLinks
-    ).toBeTruthy()
-  } catch (error) {
-    throw new Error(`Error getting links: ${error}`)
-    // Other OS
+test.concurrent('getLinks returns WindowsLinks instance', async () => {
+  const links = await getLinks()
+  expect(links instanceof WindowsLinks).toBeTruthy()
+})
+
+test.concurrent(
+  'Local and network versions have the same count and order',
+  async () => {
+    const localVersions =
+      WindowsLinks.Instance.getAvailableLocalCudaVersions()
+    const networkVersions =
+      WindowsLinks.Instance.getAvailableNetworkCudaVersions()
+
+    expect(localVersions.length).toBe(networkVersions.length)
+    expect(localVersions).toEqual(networkVersions)
   }
-})
-
-test.concurrent('getLinks return same versions in same order', async () => {
-  const linuxLinks = LinuxLinks.Instance.getAvailableLocalCudaVersions()
-  const windowsLinks = WindowsLinks.Instance.getAvailableLocalCudaVersions()
-  const windowsNetworkLinks =
-    WindowsLinks.Instance.getAvailableNetworkCudaVersions()
-
-  expect(linuxLinks.length).toBe(windowsLinks.length)
-  expect(windowsLinks.length).toBe(windowsNetworkLinks.length)
-  expect(linuxLinks).toEqual(windowsLinks)
-  expect(windowsLinks).toEqual(windowsNetworkLinks)
-})
+)
