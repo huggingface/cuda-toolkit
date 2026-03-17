@@ -9,8 +9,7 @@ test.concurrent('getLinks returns WindowsLinks instance', async () => {
 test.concurrent(
   'Local and network versions have the same count and order',
   async () => {
-    const localVersions =
-      WindowsLinks.Instance.getAvailableLocalCudaVersions()
+    const localVersions = WindowsLinks.Instance.getAvailableLocalCudaVersions()
     const networkVersions =
       WindowsLinks.Instance.getAvailableNetworkCudaVersions()
 
