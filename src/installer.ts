@@ -1,28 +1,29 @@
-import { DefaultArtifactClient } from '@actions/artifact'
 import * as core from '@actions/core'
-import { filterReadable } from './fs-utils.js'
-import { OSType, getOs, getRelease } from './platform.js'
 import { SemVer } from 'semver'
 import { exec } from '@actions/exec'
-import * as os from 'os'
 
 export async function install(
   executablePath: string,
   version: SemVer,
-  subPackagesArray: string[],
-  linuxLocalArgsArray: string[],
-  method: string,
-  logFileSuffix: string
+  subPackagesArray: string[]
 ): Promise<void> {
-  // Install arguments, see: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-advanced
-  // and https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
-  let installArgs: string[]
+  // Install arguments, see: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
+  const command: string = executablePath
 
-  // Command string that is executed
-  let command: string
+  // Install silently
+  let installArgs: string[] = ['-s']
 
-  // Subset of subpackages to install instead of everything, see: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html#install-cuda-software
-  const subPackages: string[] = subPackagesArray
+  // Add subpackages to command args (if any)
+  // See: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html#install-cuda-software
+  installArgs = installArgs.concat(
+    subPackagesArray.map((subPackage) => {
+      // Display driver sub package name is not dependent on version
+      if (subPackage === 'Display.Driver') {
+        return subPackage
+      }
+      return `${subPackage}_${version.major}.${version.minor}`
+    })
+  )
 
   // Execution options which contain callback functions for stdout and stderr of install process
   const execOptions = {
@@ -36,32 +37,6 @@ export async function install(
     }
   }
 
-  // Configure OS dependent run command and args
-  switch (await getOs()) {
-    case OSType.linux:
-      // Root permission needed on linux
-      command = `sudo ${executablePath}`
-      // Install silently, and add additional arguments
-      installArgs = ['--silent'].concat(linuxLocalArgsArray)
-      break
-    case OSType.windows:
-      // Windows handles permissions automatically
-      command = executablePath
-      // Install silently
-      installArgs = ['-s']
-      // Add subpackages to command args (if any)
-      installArgs = installArgs.concat(
-        subPackages.map((subPackage) => {
-          // Display driver sub package name is not dependent on version
-          if (subPackage === 'Display.Driver') {
-            return subPackage
-          }
-          return `${subPackage}_${version.major}.${version.minor}`
-        })
-      )
-      break
-  }
-
   // Run installer
   try {
     core.debug(`Running install executable: ${executablePath}`)
@@ -70,33 +45,5 @@ export async function install(
   } catch (error) {
     core.warning(`Error during installation: ${error}`)
     throw error
-  } finally {
-    // Always upload installation log regardless of error
-    const osType = await getOs()
-    const osRelease = await getRelease()
-    if (osType === OSType.linux) {
-      const artifactName = `cuda-install-${osType}-${osRelease}-${method}-${logFileSuffix}`
-      const candidates = ['/var/log/cuda-installer.log']
-      const files = await filterReadable(candidates)
-      const username = os.userInfo().username
-      if (files.length > 0) {
-        // If any of the files is not readable without root permissions, the upload will fail, so we need to
-        // fix the permissions first
-        for (const file of files) {
-          await exec(`sudo chmod 644 ${file}`)
-          await exec(`sudo chown ${username} ${file}`)
-        }
-        const rootDirectory = '/var/log'
-        const artifact = new DefaultArtifactClient()
-        const uploadResult = await artifact.uploadArtifact(
-          artifactName,
-          files,
-          rootDirectory
-        )
-        core.debug(`Upload result: ${uploadResult}`)
-      } else {
-        core.debug(`No log file to upload`)
-      }
-    }
   }
 }
